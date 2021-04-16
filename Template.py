@@ -158,10 +158,31 @@ class BasicModern(Template):
     """
     super().execute(card)
   
-    # Where the x and y coordinates "start at" when placing to the full template
-    base = 150
+    canvas = self.format_card(card)
 
+    # Finally, add the MPC extended border and save the image
+    border = pygame.image.load("template-data/basic/border-extend.png")
+    canvas.blit(border, (0,0))
+    pygame.image.save(canvas, "output/" + Cards.parse_card_name(card["name"]) + ".png")
+    return True
+
+  def executeBasic(self, card):
+    super().execute(card)
+    pygame.image.save(self.format_card(card, base=0), "output/" + Cards.parse_card_name(card["name"]) + ".png")
+
+  def format_card(self, card, base=150):
+    """
+    Format the entire card, does not add text. Just the template and the card art and returns it
+
+    PARAMETERS:
+     - card: The card to be formatted and returned
+     - base: Where the card should be placed on the returned canvas. Do either 150 (for MPC) or 0 (for regular)
+
+    RETURNS
+     - A pygame Surface of the card, centered if set for MPC
+    """
     card_type = card["type_line"]
+    colours = card["colors"]
 
     # A bunch of flags to be set when processing the card, before generating the image
     # Determines the borders and background
@@ -182,12 +203,32 @@ class BasicModern(Template):
     
     # First get the main background, either land or nonland
     if land == True:
-      background = None
-      print("Tried to load a land?")
-      return
+      background = pygame.image.load("template-data/basic/background/land.png")
+      title_box = pygame.image.load("template-data/basic/title-boxes/land.png")
+
+      # Determine land text colours by the mana they produce, or if they are an artifact
+      if "Artifact" in card_type:
+        text_t = "artifact"
+      elif "produced_mana" in card:
+        temp = card["produced_mana"] # Store temporary list, to handle fetchlands and stuff
+        text_t = self.get_file_name_colour(temp, 3)
+      # Default to land
+      else:
+        text_t = "land"
+      text_box = pygame.image.load("template-data/basic/land-textboxes/" + text_t + ".png")
+
     else:
-      background = pygame.image.load("template-data/basic/white-nonland.png")
-    
+      # Determine the background, text-boxes, and title-boxes from the colours and types
+      if "Artifact" in card_type:
+        back_t = "artifact"
+      else:
+        back_t = self.get_file_name_colour(colours, 2)
+      text_t = self.get_file_name_colour(colours, 3)
+      title_t = self.get_file_name_colour(colours, 2) # The title does not care about artifact
+      background = pygame.image.load("template-data/basic/background/" + back_t + ".png")
+      title_box = pygame.image.load("template-data/basic/title-boxes/" + title_t + ".png")
+      text_box = pygame.image.load("template-data/basic/nonland-textboxes/" + text_t + ".png")
+
     # Load the card art
     card_art_path = Cards.get_card_art_crop(card)
     if card_art_path == None:
@@ -199,18 +240,68 @@ class BasicModern(Template):
     card_art = Cards.dynamically_scale_card(card_art, (2294, 1686))
 
     # Now create an output canvas of the proper size, draw things to it
-    canvas = pygame.Surface((2982,4044))
+    canvas = pygame.Surface((2682+2*base,3744+2*base))
+    canvas.fill((255,255,255))  # Fill the canvas with white, before drawing to it
     canvas.blit(card_art, (200+base, 420+base))
     canvas.blit(background, (base, base))
+    if nyx:
+      canvas.blit(pygame.image.load("template-data/basic/nyx-border.png"), (base, base))
+    canvas.blit(text_box, (base, base))
+    canvas.blit(title_box, (base, base))
 
-    # Finally, add the MPC extended border and save the image
-    border = pygame.image.load("template-data/basic/border-extend.png")
-    canvas.blit(border, (0,0))
-    pygame.image.save(canvas, "output/" + Cards.parse_card_name(card["name"]) + ".png")
-    return True
+    return canvas
 
-  def executeBasic(self, card):
-    print("ExecuteBasic(card) not yet implemented :(")
+  def get_file_name_colour(self, l, gold=2):
+    """
+    Return the colour by the list of colours (by dictionary["CardName"]["colors"])
+    in a format that can be directly used to find a file
+
+    PARAMETERS:
+     - l: the list of colours of the card object
+     - gold: When the length of the list just returns "gold", either 2 or 3
+
+    RETURNS:
+     - The word representing the colour (Of the set {white,blue,black,red,green,gold})
+    """
+    if len(l) >= gold:
+      return "gold"
+    if l == ["W"]:
+      return "white"
+    if l == ["U"]:
+      return "blue"
+    if l == ["B"]:
+      return "black"
+    if l == ["R"]:
+      return "red"
+    if l == ["G"]:
+      return "green"
+    if l == ["C"]:    # A special check for colourless lands
+      return "land"
+    # Handle two colours, for text boxes, I feel like there are way better ways to do this with list comprehension
+    if "W" in l:
+      if "U" in l:
+        return "wu"
+      if "B" in l:
+        return "wb"
+      if "R" in l:
+        return "rw"
+      if "G" in l:
+        return "gw"
+    if "U" in l:
+      if "B" in l:
+        return "ub"
+      if "R" in l:
+        return "ur"
+      if "G" in l:
+        return "gu"
+    if "B" in l:
+      if "R" in l:
+        return "br"
+      if "G" in l:
+        return "bg"
+    if "R" and "G" in l:
+      return "rg"
+    return "artifact"   # Default to artifact for now, dont have colourless yet
 
 
 

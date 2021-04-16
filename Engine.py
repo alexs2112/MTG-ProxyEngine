@@ -67,7 +67,7 @@ if __name__ == "__main__":
         return
 
       # Later allow the user to select a template
-      t = Template.BlackBorderExtension(d)
+      t = Template.BasicModern(d)
 
       # Find that decklist, load it, and then execute on every card
       path = args[i+1]
@@ -76,7 +76,10 @@ if __name__ == "__main__":
         # Could not find the decklist
         return
       for key in deck:
-        t.execute(d[key])
+        if key in d:
+          t.execute(d[key])
+        else:
+          print("Could not find " + key)
 
     if "-card" in args:
       i = args.index("-card")

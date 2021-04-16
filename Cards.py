@@ -159,7 +159,7 @@ def get_full_card_image(card):
   Updater.request_scryfall_data(uri, "data/scryfall/full-cards/" + name + ".png", verbose=False)
   return "data/scryfall/full-cards/" + name + ".png"
 
-def dynamically_scale_card(image, (newx, newy)):
+def dynamically_scale_card(image, newsize):
   """
   Scales the card to the specified size without warping it.
   Gets the max scaling to fit (newx, newy) and scales both x and y by that scale.
@@ -172,6 +172,7 @@ def dynamically_scale_card(image, (newx, newy)):
    - The rescaled image, with size at least (newx, newy)
   """
   x,y = image.get_size()
+  newx, newy = newsize
   scale = max(newx / x, newy / y)
 
   return pygame.transform.scale(image, (int(x * scale), int(y * scale)))
