@@ -1,0 +1,15 @@
+Card Dimensions:
+By psd:
+ - Full bleed Area: 816 x 1110
+ - Cut Area: 744 x 1038
+ - Safe Area: 672 x 966
+ 
+So probably double this:
+ - Full bleed: 1632 x 2220
+ - Cut area: 1488 x 2076
+ - Safe area: 1344 x 1932
+ 
+Card Dimensions:
+ Full Bleed: (0,0) -> (1632,2220)
+ Cut Area: (72,72) -> (1560,2148)
+ Safe Area: (144,144) -> (1488,2076)
