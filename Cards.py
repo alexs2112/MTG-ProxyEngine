@@ -83,7 +83,7 @@ def parse_card_name(name):
   Returns:
    - The string conversion to be used for saving the file. Example: "lightning-bolt"
   """
-  return name.lower().replace(" ", "-").replace(",", "-").replace(".", "-")
+  return name.lower().replace(", ", "-").replace(" ", "-")
 
 def get_card_art_crop(card):
   """
