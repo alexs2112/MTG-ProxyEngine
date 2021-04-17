@@ -17,13 +17,15 @@ SAFE_START = 144
 # A few dictionaries of fonts, with keys as sizes and values as the font object
 pygame.init()
 FONTS_BOLD = {
+  150:pygame.font.Font('template-data/fonts/JaceBeleren-Bold.ttf', 150),
   140:pygame.font.Font('template-data/fonts/JaceBeleren-Bold.ttf', 140),
   120:pygame.font.Font('template-data/fonts/JaceBeleren-Bold.ttf', 120)
 }
-FONTS_BASIC = {
-  140:pygame.font.Font('template-data/fonts/MPlantin.ttf', 140),
-  130:pygame.font.Font('template-data/fonts/MPlantin.ttf', 130),
-  120:pygame.font.Font('template-data/fonts/MPlantin.ttf', 120)
+FONTS_BASIC = {   # Stores a tuple of the font and how many chars can fit on a line in the text box
+  140:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 140),38),
+  130:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 130),40),
+  120:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 120),42),
+  110:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 110),46)
 }
 FONTS_ITAL = {
   120:pygame.font.Font('template-data/fonts/MPlantin-Italic.ttf', 120)
@@ -50,56 +52,64 @@ def write(surface, text, x, y, size, bold=False, ital=False):
   label = font.render(text, 1, (0,0,0))
   surface.blit(label, (x,y))
 
-def write_wrapped(surface, text, rect, font, color=(0,0,0)):
+def write_wrapped(surface, text, rect, size, color=(0,0,0)):
   """
-  A basic function to write wrapped text in a block
-  Pygame doesnt come with this functionality
-  Copied from https://www.pygame.org/wiki/TextWrap
-  although I might need to make changes in the future as this is probably really slow
+  A basic function to write wrapped text in a block as Pygame doesnt come with this functionality
 
   PARAMETERS: 
    - surface: The card to draw on
    - text: The text to write
    - rect: The rectangle the text will be written in
-   - font: The font to use
+   - size: The font size to use
    - color: Colour of the text, defaults to black
-
-  RETURNS:
-   - Any text that will not fit in the box
   """
+
   rect = pygame.Rect(rect)
   y = rect.top
-  lineSpacing = -2
+  lineSpacing = 40 # The space between lines after \n
 
+  # This is a poor way to do it but it works for now
+  newlines = 10 * text.count("\n")   # Count newlines as 10 characters since they take up a lot of space
+  if (len(text) + newlines > 300):
+    size = 110
+    y -= 60
+    lineSpacing -= 20
+  elif (len(text) + newlines > 230):
+    size = 120
+    y -= 50
+    lineSpacing -= 15
+  else:
+    size = 130
+
+  font, max_chars = FONTS_BASIC[size]
+  
   # get the height of the font
   fontHeight = font.size("Tg")[1]
-  print(text)
 
-  while text:
-    i = 1
+  # Get a temporary list of all lines, split at newline characters
+  lines = text.split("\n")
 
-    # determine if the row of text will be outside our area
-    if y + fontHeight > rect.bottom:
-      break
+  # Then iterate over each line
+  for line in lines:
+    while line:
+      # If the length of this line is greater than the max chars allowed, wrap to the last word
+      if len(line) > max_chars:
+        i = line.rfind(" ", 0, max_chars) + 1
+      else:
+        i = len(line)
+      
+      # Render and draw the text
+      l = font.render(line[:i], False, color)
+      surface.blit(l, (rect.left, y))
 
-    # determine maximum width of line
-    while font.size(text[:i])[0] < rect.width and i < len(text):
-      i += 1
+      # Chop off the stuff we just drew
+      line = line[i:]
 
-    # if we've wrapped the text, then adjust the wrap to the last word      
-    if i < len(text): 
-      i = text.rfind(" ", 0, i) + 1
-
-    # render the line and blit it to the surface
-    image = font.render(text[:i], False, color)
-
-    surface.blit(image, (rect.left, y))
-    y += fontHeight + lineSpacing
-
-    # remove the text we just blitted
-    text = text[i:]
-
-  return text
+      # If this line is now empty, increase y a little more to account for the newline, otherwise increase y normally
+      if line:
+        y += fontHeight
+      else:
+        y += fontHeight + lineSpacing
 
 class Template:
   """
@@ -336,6 +346,10 @@ class BasicModern(Template):
       canvas.blit(pygame.image.load("template-data/basic/nyx-border.png"), (base, base))
     canvas.blit(text_box, (base, base))
     canvas.blit(title_box, (base, base))
+    if creature or "Vehicle" in card_type:
+      pt = self.get_file_name_colour(colours, 2)
+      canvas.blit(pygame.image.load("template-data/basic/pt-boxes/" + pt + ".png"), (base, base))
+
 
     return self.add_text(canvas, card, base=base)
 
@@ -352,16 +366,17 @@ class BasicModern(Template):
     RETURNS:
      - The completed canvas, to be saved as a png file to output
     """
-
     # For now, write a bunch of tests to make sure it actually works
     write(canvas, card["name"], 220+base, 230+base, 140, bold=True)
     write(canvas, card["type_line"], 220+base, 2170+base, 120, bold=True)
-    #write(canvas, card["oracle_text"], 230+base, 2374+base, 120)
-    # Some additional height of the text box for noncreatures
-    nc = 0
-    if "Creature" not in card["type_line"]:
-      nc = 220
-    write_wrapped(canvas, card["oracle_text"], (230+base, 2464+base, 2200+base, 3200+nc+base), FONTS_BASIC[130])
+    write_wrapped(canvas, card["oracle_text"], (230+base, 2464+base, 2200+base, 3420+base), 130)
+
+    if "Creature" or "Vehicle" in card["type_line"]:
+      font = FONTS_BOLD[150]
+      pt = font.render(card["power"] + "/" + card["toughness"], 1, (0,0,0))
+      pt_rect = pt.get_rect(center=(2312+base,3450+base))
+      canvas.blit(pt, pt_rect)
+
     return canvas
 
   def get_file_name_colour(self, l, gold=2):
