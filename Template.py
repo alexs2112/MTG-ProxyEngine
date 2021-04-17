@@ -14,6 +14,93 @@ SAFE_HEIGHT = 1932
 CUT_START = 72
 SAFE_START = 144
 
+# A few dictionaries of fonts, with keys as sizes and values as the font object
+pygame.init()
+FONTS_BOLD = {
+  140:pygame.font.Font('template-data/fonts/JaceBeleren-Bold.ttf', 140),
+  120:pygame.font.Font('template-data/fonts/JaceBeleren-Bold.ttf', 120)
+}
+FONTS_BASIC = {
+  140:pygame.font.Font('template-data/fonts/MPlantin.ttf', 140),
+  130:pygame.font.Font('template-data/fonts/MPlantin.ttf', 130),
+  120:pygame.font.Font('template-data/fonts/MPlantin.ttf', 120)
+}
+FONTS_ITAL = {
+  120:pygame.font.Font('template-data/fonts/MPlantin-Italic.ttf', 120)
+}
+
+def write(surface, text, x, y, size, bold=False, ital=False):
+  """
+  A basic helper function to write to the surface
+
+  PARAMETERS:
+   - surface: The pygame Surface object we want to write to
+   - text: The text to write
+   - x,y: The starting x,y coordinates of the text
+   - size: The font size in { 72, 100, 150 }
+   - bold: If the text is to be bolded
+   - ital: If the text is to be italicized. Cannot be both bolded and italicized
+  """
+  if bold:
+    font = FONTS_BOLD[size]
+  elif ital:
+    font = FONTS_ITAL[size]
+  else:
+    font = FONTS_BASIC[size]
+  label = font.render(text, 1, (0,0,0))
+  surface.blit(label, (x,y))
+
+def write_wrapped(surface, text, rect, font, color=(0,0,0)):
+  """
+  A basic function to write wrapped text in a block
+  Pygame doesnt come with this functionality
+  Copied from https://www.pygame.org/wiki/TextWrap
+  although I might need to make changes in the future as this is probably really slow
+
+  PARAMETERS: 
+   - surface: The card to draw on
+   - text: The text to write
+   - rect: The rectangle the text will be written in
+   - font: The font to use
+   - color: Colour of the text, defaults to black
+
+  RETURNS:
+   - Any text that will not fit in the box
+  """
+  rect = pygame.Rect(rect)
+  y = rect.top
+  lineSpacing = -2
+
+  # get the height of the font
+  fontHeight = font.size("Tg")[1]
+  print(text)
+
+  while text:
+    i = 1
+
+    # determine if the row of text will be outside our area
+    if y + fontHeight > rect.bottom:
+      break
+
+    # determine maximum width of line
+    while font.size(text[:i])[0] < rect.width and i < len(text):
+      i += 1
+
+    # if we've wrapped the text, then adjust the wrap to the last word      
+    if i < len(text): 
+      i = text.rfind(" ", 0, i) + 1
+
+    # render the line and blit it to the surface
+    image = font.render(text[:i], False, color)
+
+    surface.blit(image, (rect.left, y))
+    y += fontHeight + lineSpacing
+
+    # remove the text we just blitted
+    text = text[i:]
+
+  return text
+
 class Template:
   """
   The parent class that all other templates are derived from
@@ -163,6 +250,7 @@ class BasicModern(Template):
     # Finally, add the MPC extended border and save the image
     border = pygame.image.load("template-data/basic/border-extend.png")
     canvas.blit(border, (0,0))
+    self.add_text(canvas, card)
     pygame.image.save(canvas, "output/" + Cards.parse_card_name(card["name"]) + ".png")
     return True
 
@@ -249,6 +337,31 @@ class BasicModern(Template):
     canvas.blit(text_box, (base, base))
     canvas.blit(title_box, (base, base))
 
+    return self.add_text(canvas, card, base=base)
+
+  def add_text(self, canvas, card, base=150, flavour_text=True):
+    """
+    Finishes up card creation by adding all the relevant text to the card.
+
+    PARAMETERS:
+     - canvas: The current card, formatted with the image already loaded
+     - card: The card object
+     - base: An offset for all the text. Do 150 for MPC format and 0 for regular format
+     - flavour_text: If you want flavour text or not
+
+    RETURNS:
+     - The completed canvas, to be saved as a png file to output
+    """
+
+    # For now, write a bunch of tests to make sure it actually works
+    write(canvas, card["name"], 220+base, 230+base, 140, bold=True)
+    write(canvas, card["type_line"], 220+base, 2170+base, 120, bold=True)
+    #write(canvas, card["oracle_text"], 230+base, 2374+base, 120)
+    # Some additional height of the text box for noncreatures
+    nc = 0
+    if "Creature" not in card["type_line"]:
+      nc = 220
+    write_wrapped(canvas, card["oracle_text"], (230+base, 2464+base, 2200+base, 3200+nc+base), FONTS_BASIC[130])
     return canvas
 
   def get_file_name_colour(self, l, gold=2):
@@ -265,18 +378,22 @@ class BasicModern(Template):
     """
     if len(l) >= gold:
       return "gold"
-    if l == ["W"]:
-      return "white"
-    if l == ["U"]:
-      return "blue"
-    if l == ["B"]:
-      return "black"
-    if l == ["R"]:
-      return "red"
-    if l == ["G"]:
-      return "green"
-    if l == ["C"]:    # A special check for colourless lands
-      return "land"
+    
+    if len(l) == 1:
+      mono = {
+        "W":"white",
+        "U":"blue",
+        "B":"black",
+        "R":"red",
+        "G":"green",
+        "C":"land" # A special check for colourless lands
+      }
+      if l[0] in mono:
+        return mono[l[0]]
+      else:
+        # Default to artifacts for now
+        return "artifact" 
+
     # Handle two colours, for text boxes, I feel like there are way better ways to do this with list comprehension
     if "W" in l:
       if "U" in l:

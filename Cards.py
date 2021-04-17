@@ -26,16 +26,14 @@ def serialize_all_cards(verbose=True):
   
   # Set up a new dictionary
   d = {}
-  line = f.readline() # Skips the first line as it is always just [
-  line = f.readline() 
-
+  
   if verbose:
     print("Parsing...")
-
-
-  ## THIS CAN BE DONE WAY MORE EFFICIENTLY WITH f.readlines()
-
-  while line != "]":  # Read until the end of the file, which is ]  
+  all_lines = f.readlines()
+  
+  # Read all lines in the scryfall file minus the first and last one
+  for i in range(1, len(all_lines)-1): 
+    line = all_lines[i]
     
     # The last line does not end with a , so we need to check the comma in every line
     if line[-2] == ',':
@@ -43,9 +41,6 @@ def serialize_all_cards(verbose=True):
     
     card = json.loads(line)       # Need to cut off the extra scryfall data on the end
     d[card["name"]] = card        # Store in the database under its name
-
-    # Then read the next line
-    line = f.readline()
   
   if verbose:
     print("Done Reading!")

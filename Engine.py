@@ -8,7 +8,8 @@ def print_cmd_arguments():
   -update {all|bulk|cards|ser} (ex: -update all)
   -decklist Filepath
   -card [Card Name]
-  -noverbose (verbose is on by default)
+  -noverbose                   (verbose is on by default)
+  -basic                       (not formatted for MPC)
 
 Examples:
   python Engine.py -update all
@@ -32,6 +33,11 @@ if __name__ == "__main__":
     verbose = True
     if "-noverbose" in args:
       verbose = False
+
+    # Set a tag to format for MPC or basic
+    basic = False
+    if "-basic" in args:
+      basic = True
 
     # Handle updating
     if "-update" in args:
@@ -77,7 +83,10 @@ if __name__ == "__main__":
         return
       for key in deck:
         if key in d:
-          t.execute(d[key])
+          if basic:
+            t.executeBasic(d[key])
+          else:
+            t.execute(d[key])
         else:
           print("Could not find " + key)
 
@@ -109,7 +118,10 @@ if __name__ == "__main__":
       
       # Later allow the user to select a template
       t = Template.BasicModern(d)
-      t.execute(d[name])
+      if basic:
+        t.executeBasic(d[name])
+      else:
+        t.execute(d[name])
   main()
     
     
