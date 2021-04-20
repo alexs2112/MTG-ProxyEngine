@@ -1,5 +1,5 @@
 import os, pygame
-import Cards
+import Cards, Icons
 
 # Some constants regarding card dimensions
 BLEED_WIDTH = 1632
@@ -23,15 +23,15 @@ FONTS_BOLD = {
 }
 FONTS_BASIC = {   # Stores a tuple of the font and how many chars can fit on a line in the text box
   140:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 140),38),
-  130:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 130),40),
-  120:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 120),42),
+  130:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 130),41),
+  120:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 120),44),
   110:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 110),46)
 }
 FONTS_ITAL = {
   120:pygame.font.Font('template-data/fonts/MPlantin-Italic.ttf', 120)
 }
 
-def write(surface, text, x, y, size, bold=False, ital=False):
+def write(surface, text, x, y, size, bold=False, ital=False, symbol=False):
   """
   A basic helper function to write to the surface
 
@@ -47,6 +47,8 @@ def write(surface, text, x, y, size, bold=False, ital=False):
     font = FONTS_BOLD[size]
   elif ital:
     font = FONTS_ITAL[size]
+  elif symbol:
+    font = FONTS_ICONS[size]
   else:
     font = FONTS_BASIC[size]
   label = font.render(text, 1, (0,0,0))
@@ -247,6 +249,10 @@ class BasicModern(Template):
 
   Loaded template should be placed at (150,150)
   """
+  def __init__(self, all_cards):
+    Template.__init__(self, all_cards)
+    self.icons = Icons.Icons()
+
   def execute(self, card):
     """
     Creates a full MPC ready proxy utilizing the template files and local database
@@ -254,10 +260,9 @@ class BasicModern(Template):
     Use executeBasic(card) for generating a proxy formatted as a regular card
     """
     super().execute(card)
-  
     canvas = self.format_card(card)
 
-    # Finally, add the MPC extended border and save the image
+    # Add the MPC extended border and save the image
     border = pygame.image.load("template-data/basic/border-extend.png")
     canvas.blit(border, (0,0))
     self.add_text(canvas, card)
@@ -265,6 +270,11 @@ class BasicModern(Template):
     return True
 
   def executeBasic(self, card):
+    """
+    Creates a proxy card without the extended black border for use with MPC
+
+    Use execute(card) instead for generating a proxy formatted for printing with MPC
+    """
     super().execute(card)
     pygame.image.save(self.format_card(card, base=0), "output/" + Cards.parse_card_name(card["name"]) + ".png")
 
@@ -333,14 +343,16 @@ class BasicModern(Template):
       return False
     card_art = pygame.image.load(card_art_path)
 
-    # By the template, the image should be about 2294x1686 and be placed at (200,420) + base
-    # For now, just directly resize it without worrying about scale
+    # By the template, the image should be about 2294x1686 and be placed at (200,420) + base, accounting for an offset
+    # if the image is too big in one direction (to center it)
     card_art = Cards.dynamically_scale_card(card_art, (2294, 1686))
+    w_offset = (card_art.get_width() - 2294) // 2
+    h_offset = (card_art.get_height() - 1686) // 2
 
     # Now create an output canvas of the proper size, draw things to it
     canvas = pygame.Surface((2682+2*base,3744+2*base))
     canvas.fill((255,255,255))  # Fill the canvas with white, before drawing to it
-    canvas.blit(card_art, (200+base, 420+base))
+    canvas.blit(card_art, (200+base-w_offset, 420+base-h_offset))
     canvas.blit(background, (base, base))
     if nyx:
       canvas.blit(pygame.image.load("template-data/basic/nyx-border.png"), (base, base))
@@ -350,6 +362,7 @@ class BasicModern(Template):
       pt = self.get_file_name_colour(colours, 2)
       canvas.blit(pygame.image.load("template-data/basic/pt-boxes/" + pt + ".png"), (base, base))
 
+    self.add_mana_cost(canvas, card, base=base)
 
     return self.add_text(canvas, card, base=base)
 
@@ -371,13 +384,44 @@ class BasicModern(Template):
     write(canvas, card["type_line"], 220+base, 2170+base, 120, bold=True)
     write_wrapped(canvas, card["oracle_text"], (230+base, 2464+base, 2200+base, 3420+base), 130)
 
-    if "Creature" or "Vehicle" in card["type_line"]:
+    if "Creature" in card["type_line"] or "Vehicle" in card["type_line"]:
       font = FONTS_BOLD[150]
       pt = font.render(card["power"] + "/" + card["toughness"], 1, (0,0,0))
       pt_rect = pt.get_rect(center=(2312+base,3450+base))
       canvas.blit(pt, pt_rect)
 
     return canvas
+  
+  def add_mana_cost(self, canvas, card, base=150):
+    """
+    Load and draw the mana cost to the card, using the initialized Icons.py
+
+    PARAMETERS:
+     - canvas: The card image that is currently being drawn to
+     - card: The card being drawn
+     - base: An offset for all the text. Do 150 for MPC format and 0 for regular format
+    """
+    # Get the starting position of the mana cost and work backwards
+    sx = 2484 + base
+    sy = 206 + base
+
+    if "mana_cost" not in card:
+      return
+    cost = card["mana_cost"]
+
+    # As the cost is a string looking something like "{2}{W}", we cut off the first and last element
+    # and then split at }{ to get a list of costs
+    l = cost[1:-1]
+    l = l.split('}{')
+
+    # Reverse the list as we are working backwards, then blit each icon and move back
+    for c in reversed(l):
+      i = self.icons.get_title(c)
+      if i == None:
+        break
+      sx -= (i.get_width() + 6)
+      canvas.blit(i, (sx, sy))
+    return
 
   def get_file_name_colour(self, l, gold=2):
     """

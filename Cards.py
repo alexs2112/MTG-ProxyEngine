@@ -141,7 +141,6 @@ def get_full_card_image(card):
   if path.exists("data/scryfall/full-cards/" + name + ".png"):
     # If the art exists, just return with a message
     # We can fix this protocol later
-    print("Card art already loaded for " + name)
     return "data/scryfall/full-cards/" + name + ".png"
   
   # Otherwise, download the cropped art from scryfall
@@ -169,6 +168,6 @@ def dynamically_scale_card(image, newsize):
   x,y = image.get_size()
   newx, newy = newsize
   scale = max(newx / x, newy / y)
-
-  return pygame.transform.scale(image, (int(x * scale), int(y * scale)))
+  i = pygame.transform.scale(image, (int(x * scale), int(y * scale)))
+  return i
   
