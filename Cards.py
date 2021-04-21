@@ -170,4 +170,41 @@ def dynamically_scale_card(image, newsize):
   scale = max(newx / x, newy / y)
   i = pygame.transform.scale(image, (int(x * scale), int(y * scale)))
   return i
+
+def two_colour_background(card):
+  """
+  Checks if all mana symbols in a cards mana cost is either generic or two coloured (such as {R/W})
+  If so, returns true, otherwise false
+
+  RETURNS:
+   - A boolean depending on if the card needs a two coloured background, rather than a gold background
+  """
+  if "mana_cost" not in card:
+    return False
+  
+  # First get a list of the cost of the card
+  cost = card["mana_cost"]
+  l = cost[1:-1]
+  l = l.split('}{')
+
+  # Set up a couple other lists
+  colours = ["W", "U", "B", "R", "G"]
+  check = ['B/G', 'B/R', 'G/U', 'G/W', 'R/G', 'R/W', 'U/B', 'U/R', 'W/B', 'W/U']
+
+  # Make sure there is only one dual colour cost
+  current = ''
+  
+  # Iterate over every cost in the cards mana cost. If it is in colours, return False as the border cannot be
+  # two coloured. If there is at least one cost in check that is not in colours, return True
+  hasone = False
+  for c in l:
+    if c in colours:
+      return False
+    if c in check:
+      if current != c and hasone == True:
+        return False
+      hasone = True
+      current = c
+  return hasone
+
   

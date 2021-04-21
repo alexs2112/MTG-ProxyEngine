@@ -23,7 +23,7 @@ FONTS_BOLD = {
 }
 FONTS_BASIC = {   # Stores a tuple of the font and how many chars can fit on a line in the text box
   140:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 140),38),
-  130:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 130),41),
+  130:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 130),40),
   120:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 120),44),
   110:(pygame.font.Font('template-data/fonts/MPlantin.ttf', 110),46)
 }
@@ -327,12 +327,16 @@ class BasicModern(Template):
 
     else:
       # Determine the background, text-boxes, and title-boxes from the colours and types
+      title_t = self.get_file_name_colour(colours, 2) # The title does not care about artifact
       if "Artifact" in card_type:
         back_t = "artifact"
       else:
-        back_t = self.get_file_name_colour(colours, 2)
+        if Cards.two_colour_background(card):
+          back_t = self.get_file_name_colour(colours, 3)
+          title_t = "land"
+        else:
+          back_t = self.get_file_name_colour(colours, 2)
       text_t = self.get_file_name_colour(colours, 3)
-      title_t = self.get_file_name_colour(colours, 2) # The title does not care about artifact
       background = pygame.image.load("template-data/basic/background/" + back_t + ".png")
       title_box = pygame.image.load("template-data/basic/title-boxes/" + title_t + ".png")
       text_box = pygame.image.load("template-data/basic/nonland-textboxes/" + text_t + ".png")

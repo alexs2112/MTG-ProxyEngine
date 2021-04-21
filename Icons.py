@@ -26,7 +26,7 @@ class Icons:
       self.title_path[str(i)] = "template-data/symbols/title/" + str(i) + ".png"
     
     # Coloured mana symbols
-    for c in ['W', 'U', 'B', 'R', 'G', 'C']:
+    for c in ['W', 'U', 'B', 'R', 'G', 'C', 'S', 'X']:
       self.title_path[c] = "template-data/symbols/title/mana_" + c.lower() + ".png"
 
     # Dual costs of 2/C (mostly for reaper king)
