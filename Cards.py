@@ -85,12 +85,14 @@ def parse_card_name(name):
   """
   return name.lower().replace(", ", "-").replace(" ", "-")
 
-def get_card_art_crop(card):
+def get_card_art_crop(card, autoproxy_format=False):
   """
   Searches scryfall for the specified card art and saves it to data/scryfall/card-art/[card-name]
 
   PARAMETERS:
    - card: the card dictionary from the main all-cards dictionary. Example: dictionary["Lightning Bolt"]
+   - autoproxy_format: how the filename should be saved. Formats it to be <CardName> (<Artist>).png to comply
+     with https://github.com/ndepaola/mtg-autoproxy
 
   RETURNS:
    - Returns the filepath to the image if available
@@ -98,16 +100,21 @@ def get_card_art_crop(card):
   assert type(card) == dict
 
   try:
-    name = parse_card_name(card["name"])
+    if autoproxy_format:
+      name = card["name"] + " (" + card["artist"] + ")"
+      extension = ".jpg"
+    else:
+      name = parse_card_name(card["name"])
+      extension = ".png"
   except:
     print("Could not get the name from card " + card)
     return
 
-  if path.exists("data/scryfall/card-art/" + name + ".png"):
+  if path.exists("data/scryfall/card-art/" + name + extension):
     # If the art exists, just return with a message
     # We can fix this protocol later
     print("Card art already loaded for " + name)
-    return "data/scryfall/card-art/" + name + ".png"
+    return "data/scryfall/card-art/" + name + extension
   
   # Otherwise, download the cropped art from scryfall
   try:
@@ -116,8 +123,8 @@ def get_card_art_crop(card):
     print('Could not get ["image_uris"]["art_crop"] from card ' + name)
     return
   
-  Updater.request_scryfall_data(uri, "data/scryfall/card-art/" + name + ".png", verbose=False)
-  return "data/scryfall/card-art/" + name + ".png"
+  Updater.request_scryfall_data(uri, 'data/scryfall/card-art/' + name + extension, verbose=False)
+  return "data/scryfall/card-art/" + name + extension
 
 def get_full_card_image(card):
   """

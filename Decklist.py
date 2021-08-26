@@ -39,7 +39,7 @@ def load_decklist_from_file(filepath):
 
   # Iterate over every line in the decklist
   for line in dat:
-    if line[0] == '\n':
+    if line[0] == '\n' or line[0] == '#':
       continue
 
     # Base amount of a card is 1
@@ -60,5 +60,38 @@ def load_decklist_from_file(filepath):
       d[line] = n
 
   return d
+
+def print_decklist(decklist, only_one_of_each=False):
+  total = 0
+  cards = []
+  for key in decklist:
+    cards.append(key)
+  
+  cards.sort()
+
+  for card in cards:
+    if only_one_of_each:
+      print("1 " + card)
+      total += 1
+    else:
+      print(str(decklist[card]) + " " + card)
+      total += decklist[card]
+
+  print("\nTotal Cards: " + str(total))
+  
+def compare_decklist(deck1, deck2):
+  missing = []
+
+  for card in deck2:
+    if card not in deck1:
+      missing.append(card)
+  
+  if len(missing) == 0:
+    print("All cards already in decklist!")
+    return
+  else:
+    print("Missing " + str(len(missing)) + " cards")
+    for card in missing:
+      print(card)
 
   

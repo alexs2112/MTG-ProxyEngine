@@ -1,24 +1,37 @@
 import json, sys, os
-import Updater, Cards, Decklist, Template
+import Updater, Cards, Decklist, Template, Autofill
 
 
 def print_cmd_arguments():
-  print("""Arguments:
+  print("""Help:
+Functions:
   -help
   -update {all|bulk|cards|ser} (ex: -update all)
   -decklist Filepath
   -card [Card Name]
-  -noverbose                   (verbose is on by default)
-  -basic                       (not formatted for MPC)
+  -art [Card Name]              (just the card art)
+  -artlist Filepath             (card art for the entire list)
+  -autofill                     (clear autofill text from all files in autofill dir)
+  -print_decklist Filepath true/false   (print condensed contents of a decklist in alphabetical order)
+                                (true means each card is printed as a 1 of)
+
+Flags:
+  -noverbose                    (verbose is on by default)
+  -basic                        (not formatted for MPC)
+  -autoproxy                    (Set a flag to format art output 
+                                 titles for the autoproxy tool)
 
 Examples:
   python Engine.py -update all
   python Engine.py -decklist decklist.txt
   python Engine.py -card [Lightning Bolt]
+  python Engine.py -autoproxy -artlist decklist.txt
 
 If this is your first time running the engine,
 you need to update all to build the necessary
-local database""")
+local database
+
+Art is saved to ProxyEngine/data/scryfall/card-art by default""")
 
 def construct_card(name, database, template, basic=False):
   """
@@ -50,7 +63,7 @@ if __name__ == "__main__":
   def main():
     # Get cmd arguments
     args = sys.argv[1:]
-    #print(args)
+    
     if len(args) == 0 or "-help" in args:
       print_cmd_arguments()
       return
@@ -64,6 +77,11 @@ if __name__ == "__main__":
     basic = False
     if "-basic" in args:
       basic = True
+
+    # Set a tag to format art filenames as <CardName> (<ArtistName>).png
+    autoproxy_format = False
+    if "-autoproxy" in args:
+      autoproxy_format = True
 
     # Handle updating
     if "-update" in args:
@@ -86,7 +104,8 @@ if __name__ == "__main__":
         return
 
     d = {}
-    if "-decklist" in args or "-card" in args:
+    # Fix this ugly if condition later
+    if "-decklist" in args or "-card" in args or "-art" in args or "-artlist" in args or "-autofill" in args:
       d = Cards.deserialize_all_cards()
       if d == {}:
         print("Cannot find all-cards.ser")
@@ -115,7 +134,7 @@ if __name__ == "__main__":
       i = args.index("-card")
       if len(args) <= i+1:
         print("Missing card to generate")
-        print("Correct Function: -decklist [Card Name]")
+        print("Correct Function: -card [Card Name]")
         return
 
       # Do some rudimentary handling of a card name, this probably sucks
@@ -132,17 +151,78 @@ if __name__ == "__main__":
       
       # Then construct the card given in the command line
       construct_card(name, d, t, basic=basic)
+    
+    if "-art" in args:
+      i = args.index("-art")
+      if len(args) <= i+1:
+        print("Missing card art to fetch")
+        print("Correct Function: -art [Card Name]")
+        return
+
+      # Do some rudimentary handling of a card name
+      name = args[i+1][1:]
+      if name[-1] == "]":
+        # Account with names that only have 1 word
+        name = name[:-1]
+      else:
+        for n in range(i+2, len(args)):
+          if "]" in args[n]:
+            name += " " + args[n][:-1]
+            break
+          name += " " + args[n]
+      Cards.get_card_art_crop(d[name], autoproxy_format)
+
+    if "-artlist" in args:
+      i = args.index("-artlist")
+      if len(args) <= i+1:
+        print("Missing filepath to list")
+        print("Correct Function: -artlist filepath/filename.txt")
+        return
+
+      # Find that decklist, load it, and then execute on every card
+      path = args[i+1]
+      deck = Decklist.load_decklist_from_file(path)
+      if deck == {}:
+        # Could not find the decklist
+        return
+      for key in deck:
+        Cards.get_card_art_crop(d[key], autoproxy_format)
+
+    if "-autofill" in args:
+      # Go over every image in the autofill directory and remove the mpcautofill text
+      Autofill.remove_autofill(d, verbose)
+
+    if "-print_decklist" in args:
+      i = args.index("-print_decklist")
+      if len(args) <= i+1:
+        print("Missing filepath to decklist")
+        print("Correct Function: -print_decklist filepath/filename.txt [true/false]")
+        return
+
+      only_one_of_each = False
+      if len(args) > i+2:
+        if args[i+2] == "true":
+          only_one_of_each = True
+
+      # Find that decklist, load it, and then execute on every card
+      path = args[i+1]
+      deck = Decklist.load_decklist_from_file(path)
+      if deck == {}:
+        # Could not find the decklist
+        return
+      Decklist.print_decklist(deck, only_one_of_each)
+
+    if "-compare_decklist" in args:
+      i = args.index("-compare_decklist")
+      if len(args) <= i+2:
+        print("Missing filepath to decklists")
+        print("Correct Function: -compare_decklist decklist.txt compare.txt")
+        return
+
+      deck1 = Decklist.load_decklist_from_file(args[i+1])
+      deck2 = Decklist.load_decklist_from_file(args[i+2])
+      Decklist.compare_decklist(deck1, deck2)
+      
+
   main()
     
-    
-    
-    
-
-
-
-
-  
-
-
-  
-  
